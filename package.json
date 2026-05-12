@@ -1,0 +1,14 @@
+{
+  "name": "flowboard-ai",
+  "version": "2.0.0",
+  "description": "AI Agent Workspace — Agentic Kanban for humans and AI",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "stop": "taskkill /F /IM node.exe /FI \"WINDOWTITLE eq Flowboard*\" 2>nul || echo Already stopped",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0"
+  }
+}

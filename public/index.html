@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Flowboard AI — An AI agent workspace for humans and AI to collaborate on project tasks.">
+  <title>Flowboard AI — Agent Workspace</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+</head>
+<body data-theme="dark">
+  <div class="app-layout" id="app">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-icon"><i data-lucide="zap" style="width:14px;height:14px"></i></div>
+        <span>Flowboard <sup class="logo-ai">AI</sup></span>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="sidebar-section">
+          <div class="sidebar-section-title">Workspace</div>
+          <a class="sidebar-item active" data-nav="projects" id="nav-projects">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+            Projects
+          </a>
+          <a class="sidebar-item" data-nav="mission" id="nav-mission">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            Mission Control
+          </a>
+        </div>
+        <div class="sidebar-section">
+          <div class="sidebar-section-title">Configure</div>
+          <a class="sidebar-item" data-nav="providers" id="nav-providers">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2a4 4 0 0 0-4 4v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4z"/><circle cx="12" cy="15" r="2"/></svg>
+            AI Providers
+          </a>
+          <a class="sidebar-item" data-nav="settings" id="nav-settings">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            Settings
+          </a>
+        </div>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="save-status"><span class="save-dot"></span> Connected</div>
+      </div>
+    </aside>
+
+    <!-- MAIN AREA -->
+    <div class="main-area">
+
+      <!-- SCREEN: Projects -->
+      <div class="screen active" id="screen-projects">
+        <div class="topbar">
+          <div class="topbar-left">
+            <button class="btn-icon" id="menuToggle" style="display:none">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+            </button>
+            <h2>Projects</h2>
+          </div>
+          <div class="topbar-right">
+            <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" id="themeIcon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="content screen-scroll">
+          <div class="projects-header">
+            <h1>Your Workspaces</h1>
+            <button class="btn btn-primary" id="openFolderBtn">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              Open Folder
+            </button>
+          </div>
+          <div id="projects-container"></div>
+        </div>
+      </div>
+
+      <!-- SCREEN: Board -->
+      <div class="screen" id="screen-board">
+        <div class="board-topbar">
+          <div class="board-topbar-left">
+            <button class="btn-icon back-btn" id="backToProjects" title="Back">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </button>
+            <div class="board-title-group">
+              <h2 id="board-project-title">Project</h2>
+              <p id="board-project-desc"></p>
+            </div>
+          </div>
+          <div class="board-topbar-right">
+            <div class="topbar-search">
+              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+              <input type="text" placeholder="Search tasks..." id="boardSearch">
+            </div>
+            <button class="btn btn-secondary btn-sm" id="toggleChatBtn" title="Toggle AI Panel (Ctrl+B)"><i data-lucide="bot" style="width:14px;height:14px"></i> AI</button>
+            <button class="btn btn-ghost btn-sm shortcut-hint-btn" id="shortcutHintBtn" title="Keyboard shortcuts (?)"><i data-lucide="keyboard" style="width:14px;height:14px"></i></button>
+            <button class="btn btn-primary btn-sm" id="addTaskBtn" title="New task (Ctrl+N)"><i data-lucide="plus" style="width:14px;height:14px"></i> Task</button>
+          </div>
+        </div>
+
+        <!-- Bulk Action Bar -->
+        <div class="bulk-bar" id="bulkBar">
+          <span class="bulk-count">0 selected</span>
+          <button class="btn btn-sm btn-accent" id="bulkRunBtn">▶ Run Selected</button>
+          <button class="btn btn-sm btn-secondary" id="bulkMoveBtn">Move to...</button>
+          <button class="btn btn-sm btn-danger" id="bulkDeleteBtn">Delete</button>
+          <button class="btn btn-sm btn-ghost" id="bulkClearBtn">Clear</button>
+        </div>
+
+        <div class="workspace-body">
+          <div class="board-wrapper">
+            <div class="board" id="board"></div>
+            <!-- Mission Control Inline -->
+            <div class="mc-panel" id="mcPanelInline"></div>
+          </div>
+          <div class="resize-handle" id="aiPanelResize"></div>
+          <div class="ai-panel" id="aiPanel">
+            <div class="right-panel-tabs">
+              <div class="right-panel-tab active" data-panel-tab="chat"><i data-lucide="message-square" style="width:14px;height:14px"></i> Chat</div>
+              <div class="right-panel-tab" data-panel-tab="agent"><i data-lucide="zap" style="width:14px;height:14px"></i> Agent</div>
+            </div>
+            <div class="right-panel-content" id="chatPanelContent"></div>
+            <div class="right-panel-content" id="agentPanelContent" style="display:none"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCREEN: Mission Control (full) -->
+      <div class="screen" id="screen-mission">
+        <div class="topbar"><div class="topbar-left"><h2>Mission Control</h2></div></div>
+        <div class="content screen-scroll" id="mcFullContent"></div>
+      </div>
+
+      <!-- SCREEN: AI Providers -->
+      <div class="screen" id="screen-providers">
+        <div class="topbar"><div class="topbar-left"><h2>AI Providers</h2></div></div>
+        <div class="content screen-scroll" id="providersContent"></div>
+      </div>
+
+      <!-- SCREEN: Settings -->
+      <div class="screen" id="screen-settings">
+        <div class="topbar"><div class="topbar-left"><h2>Settings</h2></div></div>
+        <div class="content screen-scroll" id="settings-content"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL: Folder Browser -->
+  <div class="modal-overlay" id="folderModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Open Project Folder</h2>
+        <button class="modal-close" data-close="folderModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="folder-path-bar">
+          <input type="text" id="folderPathInput" placeholder="Enter folder path..." class="folder-path-input">
+          <button class="btn btn-secondary btn-sm" id="folderGoBtn">Go</button>
+        </div>
+        <div id="folderList" class="folder-list"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close="folderModal">Cancel</button>
+        <button class="btn btn-primary" id="folderSelectBtn">Open This Folder</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Task -->
+  <div class="modal-overlay" id="taskModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="taskModalTitle">Add Task</h2>
+        <button class="modal-close" data-close="taskModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group"><label for="taskTitleInput">Title</label><input type="text" id="taskTitleInput" placeholder="Task title" maxlength="100"></div>
+        <div class="form-group"><label for="taskDescInput">Description</label><textarea id="taskDescInput" placeholder="Describe the task..." rows="2" maxlength="500"></textarea></div>
+        <div class="form-group"><label for="taskPromptInput">AI Prompt (optional)</label><textarea id="taskPromptInput" placeholder="Instructions for AI agent..." rows="2" maxlength="2000"></textarea></div>
+        <div class="form-row">
+          <div class="form-group"><label for="taskPriorityInput">Priority</label>
+            <select id="taskPriorityInput"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option><option value="critical">Critical</option></select>
+          </div>
+          <div class="form-group"><label for="taskLabelInput">Label</label>
+            <select id="taskLabelInput"><option value="">None</option><option value="design">Design</option><option value="frontend">Frontend</option><option value="backend">Backend</option><option value="bug">Bug</option><option value="feature">Feature</option><option value="research">Research</option></select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label for="taskAssigneeInput">Assignee</label><input type="text" id="taskAssigneeInput" placeholder="Name" maxlength="40"></div>
+          <div class="form-group"><label for="taskAgentInput">Agent</label><input type="text" id="taskAgentInput" placeholder="AI agent name" maxlength="40"></div>
+        </div>
+        <div class="form-group">
+          <label>Origin</label>
+          <div class="radio-group">
+            <button class="radio-btn active" data-origin="human"><i data-lucide="user" style="width:14px;height:14px"></i> Human</button>
+            <button class="radio-btn" data-origin="ai"><i data-lucide="bot" style="width:14px;height:14px"></i> AI</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-danger" id="taskDeleteBtn" style="display:none;margin-right:auto">Delete</button>
+        <button class="btn btn-secondary" data-close="taskModal">Cancel</button>
+        <button class="btn btn-primary" id="taskModalSave">Add Task</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Provider -->
+  <div class="modal-overlay" id="providerModal">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h2 id="provModalTitle">Add Provider</h2>
+        <button class="modal-close" data-close="providerModal">&times;</button>
+      </div>
+      <div class="modal-body" id="providerForm">
+        <div class="form-row">
+          <div class="form-group"><label for="provName">Provider Name</label><input type="text" id="provName" placeholder="My OpenAI"></div>
+          <div class="form-group"><label for="provType">Type</label>
+            <select id="provType"><option value="openai">OpenAI</option><option value="anthropic">Anthropic</option><option value="google">Google / Gemini</option><option value="deepseek">DeepSeek</option><option value="mimo">Mimo (Xiaomi)</option><option value="ollama">Ollama (local)</option><option value="lmstudio">LM Studio (local)</option><option value="custom">Custom</option></select>
+          </div>
+        </div>
+        <div class="form-group"><label for="provUrl">Base URL</label><input type="text" id="provUrl" placeholder="https://api.openai.com/v1"></div>
+        <div class="form-group"><label for="provApiKey">API Key</label><input type="password" id="provApiKey" placeholder="sk-..."></div>
+        <div class="form-row">
+          <div class="form-group"><label for="provModel">Default Model</label><input type="text" id="provModel" placeholder="gpt-4o"></div>
+          <div class="form-group"><label for="provModels">Available Models (comma-sep)</label><input type="text" id="provModels" placeholder="gpt-4o, gpt-3.5-turbo"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label for="provTemp">Temperature</label><input type="number" id="provTemp" min="0" max="2" step="0.1" value="0.7"></div>
+          <div class="form-group"><label for="provMaxTokens">Max Tokens</label><input type="number" id="provMaxTokens" value="2048"></div>
+          <div class="form-group"><label for="provTimeout">Timeout (ms)</label><input type="number" id="provTimeout" value="30000"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Streaming</label><label class="toggle-label"><input type="checkbox" id="provStreaming" checked> Enable streaming</label></div>
+        </div>
+        <div class="form-group"><label for="provHeaders">Custom Headers (JSON)</label><input type="text" id="provHeaders" placeholder='{"X-Custom": "value"}'></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close="providerModal">Cancel</button>
+        <button class="btn btn-primary" id="provModalSave">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Confirm -->
+  <div class="modal-overlay" id="confirmModal">
+    <div class="modal modal-sm">
+      <div class="modal-header"><h2>Confirm</h2><button class="modal-close" data-close="confirmModal">&times;</button></div>
+      <div class="modal-body"><p id="confirmMessage">Are you sure?</p></div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close="confirmModal">Cancel</button>
+        <button class="btn btn-danger" id="confirmOk">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Side Panel: Task Detail -->
+  <div class="side-panel-overlay" id="taskPanelOverlay"></div>
+  <div class="side-panel" id="taskPanel">
+    <div class="side-panel-header">
+      <h2>Task Detail</h2>
+      <button class="btn-icon" id="closePanelBtn">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="side-panel-body"></div>
+    <div class="side-panel-footer"></div>
+  </div>
+
+  <!-- MODAL: Keyboard Shortcuts -->
+  <div class="modal-overlay" id="shortcutModal">
+    <div class="modal modal-md">
+      <div class="modal-header"><h2>⌨️ Keyboard Shortcuts</h2><button class="modal-close" data-close="shortcutModal">&times;</button></div>
+      <div class="modal-body shortcut-body">
+        <div class="shortcut-section">
+          <h4>General</h4>
+          <div class="shortcut-row"><kbd>?</kbd> or <kbd>Ctrl</kbd>+<kbd>/</kbd><span>Show this help</span></div>
+          <div class="shortcut-row"><kbd>Ctrl</kbd>+<kbd>K</kbd><span>Command palette</span></div>
+          <div class="shortcut-row"><kbd>Ctrl</kbd>+<kbd>N</kbd><span>New task</span></div>
+          <div class="shortcut-row"><kbd>Ctrl</kbd>+<kbd>O</kbd><span>Open project folder</span></div>
+          <div class="shortcut-row"><kbd>Ctrl</kbd>+<kbd>B</kbd><span>Toggle AI panel</span></div>
+          <div class="shortcut-row"><kbd>/</kbd><span>Focus search</span></div>
+          <div class="shortcut-row"><kbd>Esc</kbd><span>Close modal/panel</span></div>
+        </div>
+        <div class="shortcut-section">
+          <h4>Agent</h4>
+          <div class="shortcut-row"><kbd>Ctrl</kbd>+<kbd>Enter</kbd><span>Send to agent</span></div>
+          <div class="shortcut-row"><kbd>Ctrl</kbd>+<kbd>.</kbd><span>Abort agent</span></div>
+          <div class="shortcut-row"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>A</kbd><span>Toggle auto-approve</span></div>
+          <div class="shortcut-row"><kbd>Ctrl</kbd>+<kbd>R</kbd><span>Retry last</span></div>
+        </div>
+        <div class="shortcut-section">
+          <h4>Board</h4>
+          <div class="shortcut-row"><kbd>Ctrl</kbd>+Click<span>Multi-select cards</span></div>
+          <div class="shortcut-row"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd><span>Run selected cards</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ONBOARDING OVERLAY -->
+  <div class="onboarding-overlay" id="onboardingOverlay">
+    <div class="onboarding-card">
+      <div class="onboarding-step" data-step="0">
+        <div class="onboarding-illustration"><i data-lucide="zap" style="width:48px;height:48px;color:var(--accent)"></i></div>
+        <h2>Welcome to Flowboard AI</h2>
+        <p>Your AI-powered kanban board that can <strong>read, write, and execute code</strong> in your projects.</p>
+        <div class="onboarding-actions">
+          <button class="btn btn-primary" id="onboardNext0">Get Started →</button>
+          <button class="btn btn-ghost btn-sm" id="onboardSkip">Skip intro</button>
+        </div>
+      </div>
+      <div class="onboarding-step" data-step="1" style="display:none">
+        <div class="onboarding-illustration"><i data-lucide="folder-open" style="width:48px;height:48px;color:var(--accent)"></i></div>
+        <h2>1. Open a Project</h2>
+        <p>Click <strong>Open Folder</strong> to select your project directory. Flowboard will store task data in a <code>.flowboard/</code> folder inside it.</p>
+        <div class="onboarding-actions"><button class="btn btn-primary" id="onboardNext1">Next →</button></div>
+      </div>
+      <div class="onboarding-step" data-step="2" style="display:none">
+        <div class="onboarding-illustration"><i data-lucide="key-round" style="width:48px;height:48px;color:var(--accent)"></i></div>
+        <h2>2. Add an AI Provider</h2>
+        <p>Go to <strong>AI Providers</strong> in the sidebar. Add your OpenAI, Anthropic, or any OpenAI-compatible API key.</p>
+        <p class="onboarding-hint">Use a model with <strong>tool/function calling</strong> support (GPT-4o, Claude 3.5+)</p>
+        <div class="onboarding-actions"><button class="btn btn-primary" id="onboardNext2">Next →</button></div>
+      </div>
+      <div class="onboarding-step" data-step="3" style="display:none">
+        <div class="onboarding-illustration"><i data-lucide="layout-grid" style="width:48px;height:48px;color:var(--accent)"></i></div>
+        <h2>3. Create Tasks</h2>
+        <p>Add cards to your board with a <strong>title</strong> and <strong>AI prompt</strong>. The prompt tells the agent exactly what to do.</p>
+        <p class="onboarding-hint">Example: "Add input validation to the login form in src/auth.js"</p>
+        <div class="onboarding-actions"><button class="btn btn-primary" id="onboardNext3">Next →</button></div>
+      </div>
+      <div class="onboarding-step" data-step="4" style="display:none">
+        <div class="onboarding-illustration"><i data-lucide="bot" style="width:48px;height:48px;color:var(--accent)"></i></div>
+        <h2>4. Run the Agent</h2>
+        <p>Click <strong>Run</strong> on a card or open the <strong>Agent</strong> panel. The AI will:</p>
+        <ul class="onboarding-list">
+          <li>Read your project files</li>
+          <li>Plan the approach</li>
+          <li>Execute changes (with your approval)</li>
+          <li>Verify the result</li>
+        </ul>
+        <div class="onboarding-actions"><button class="btn btn-primary" id="onboardNext4">Next →</button></div>
+      </div>
+      <div class="onboarding-step" data-step="5" style="display:none">
+        <div class="onboarding-illustration"><i data-lucide="keyboard" style="width:48px;height:48px;color:var(--accent)"></i></div>
+        <h2>5. Shortcuts</h2>
+        <div class="onboarding-shortcuts">
+          <div><kbd>Ctrl+N</kbd> New task</div>
+          <div><kbd>Ctrl+B</kbd> Toggle AI panel</div>
+          <div><kbd>Ctrl+Enter</kbd> Send to agent</div>
+          <div><kbd>Ctrl+.</kbd> Abort agent</div>
+          <div><kbd>?</kbd> Show all shortcuts</div>
+        </div>
+        <div class="onboarding-actions"><button class="btn btn-primary" id="onboardDone">Start Building</button></div>
+      </div>
+      <div class="onboarding-dots" id="onboardDots">
+        <span class="dot active"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/data.js"></script>
+  <script src="js/modules/icons.js"></script>
+  <script src="js/modules/task-engine.js"></script>
+  <script src="js/modules/board.js"></script>
+  <script src="js/modules/chat.js"></script>
+  <script src="js/modules/mission-control.js"></script>
+  <script src="js/modules/task-detail.js"></script>
+  <script src="js/modules/providers.js"></script>
+  <script src="js/modules/ui-utils.js"></script>
+  <script src="js/modules/agent-panel.js"></script>
+  <script src="js/app.js"></script>
+  <script>document.addEventListener('DOMContentLoaded', () => { if(window.lucide) lucide.createIcons(); });</script>
+</body>
+</html>
