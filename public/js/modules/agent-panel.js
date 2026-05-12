@@ -14,11 +14,13 @@ const AgentPanel = (() => {
   let autoApprove = false;
   let selectedPreset = 'default';
   let selectedSkill = '';
+  let selectedModelValue = ''; // persist model selection across re-renders
   let tokenUsage = { input: 0, output: 0, total: 0 };
   let fileChanges = [];
   let currentCard = null;
   let currentOpts = null;
   let availableSkills = [];
+  let sessionHistory = []; // saved past sessions
 
   function render(panelEl, opts) {
     currentOpts = opts;
@@ -57,6 +59,8 @@ const AgentPanel = (() => {
               </optgroup>` : ''}
             </select>
             <button class="btn-icon agent-abort-btn" id="agentAbortBtn" title="Abort (Ctrl+.)" style="display:${isRunning ? 'flex' : 'none'}">${Icons.get('stop', 14)}</button>
+            <button class="btn-icon" id="agentNewBtn" title="New session">${Icons.get('plus', 14)}</button>
+            <button class="btn-icon" id="agentHistoryBtn" title="Session history">${Icons.get('clock', 14)}</button>
           </div>
         </div>
 
@@ -107,48 +111,84 @@ const AgentPanel = (() => {
   }
 
   function renderMessages() {
-    return messages.map(msg => {
+    let html = '';
+    let i = 0;
+    while (i < messages.length) {
+      const msg = messages[i];
       switch (msg.type) {
         case 'message':
-          return msg.role === 'user'
+          html += msg.role === 'user'
             ? `<div class="agent-msg msg-user"><span class="msg-avatar">${Icons.get('user', 14)}</span><div class="msg-text">${escHtml(msg.content)}</div></div>`
             : `<div class="agent-msg msg-ai"><span class="msg-avatar">${Icons.get('bot', 14)}</span><div class="msg-text">${renderMd(msg.content)}</div></div>`;
+          i++;
+          break;
 
-        case 'tool_start':
-          return `<div class="agent-tool-block tool-running"><div class="tool-header">${Icons.get('loading', 14, 'spin')} <strong>${escHtml(msg.toolName)}</strong></div><pre class="tool-args">${escHtml(formatArgs(msg.args))}</pre></div>`;
+        case 'tool_start': {
+          // Skip if next is tool_result for same tool
+          const next = messages[i + 1];
+          if (next && next.type === 'tool_result' && next.toolName === msg.toolName) { i++; continue; }
+          html += `<div class="agent-tool-block tool-running"><div class="tool-header">${Icons.get('loading', 14, 'spin')} <strong>${escHtml(msg.toolName)}</strong></div><pre class="tool-args">${escHtml(formatArgs(msg.args))}</pre></div>`;
+          i++;
+          break;
+        }
 
-        case 'tool_result':
-          const cls = msg.result?.success ? 'tool-success' : 'tool-error';
-          const icon = msg.result?.success ? Icons.get('success', 14) : Icons.get('error', 14);
-          const diffHtml = msg.result?.diff ? renderDiff(msg.result.diff) : '';
-          const output = (msg.result?.output || '').slice(0, 2000);
-          const isLong = output.split('\n').length > 5;
-          const highlighted = highlightToolOutput(output, msg.toolName, msg.args);
-          return `<div class="agent-tool-block ${cls}">
-            <div class="tool-header">${icon} <strong>${escHtml(msg.toolName)}</strong></div>
-            <pre class="tool-args">${escHtml(formatArgs(msg.args))}</pre>
-            ${diffHtml}
-            <div class="tool-output-wrap">
-              ${isLong ? '<button class="tool-output-toggle" onclick="this.nextElementSibling.classList.toggle(\'collapsed\');this.textContent=this.textContent===\'▼\'?\'▲\':\'▼\'">▼</button>' : ''}
-              <pre class="tool-output ${isLong ? 'collapsed' : ''}">${highlighted}</pre>
-            </div>
-          </div>`;
+        case 'tool_result': {
+          // Group consecutive tool_results with same toolName
+          const group = [msg];
+          while (i + 1 < messages.length && messages[i + 1].type === 'tool_result' && messages[i + 1].toolName === msg.toolName) {
+            i++;
+            group.push(messages[i]);
+          }
+          // Also skip preceding tool_start entries that were already consumed
+          if (group.length > 1) {
+            // Render as compact group
+            const icon = group.every(g => g.result?.success) ? Icons.get('success', 14) : Icons.get('warning', 14);
+            const cls = group.every(g => g.result?.success) ? 'tool-success' : 'tool-error';
+            html += `<div class="agent-tool-block ${cls} tool-group"><div class="tool-header">${icon} <strong>${escHtml(msg.toolName)}</strong> <span class="tool-group-count">×${group.length}</span></div>
+              <div class="tool-group-items" style="display:none">${group.map(g => `<div class="tool-group-item"><pre class="tool-args">${escHtml(formatArgs(g.args))}</pre><pre class="tool-output">${escHtml((g.result?.output || '').slice(0, 500))}</pre></div>`).join('')}</div></div>`;
+          } else {
+            // Single tool result
+            const cls = msg.result?.success ? 'tool-success' : 'tool-error';
+            const icon = msg.result?.success ? Icons.get('success', 14) : Icons.get('error', 14);
+            const output = (msg.result?.output || '').slice(0, 2000);
+            const isLong = output.split('\n').length > 5;
+            const highlighted = highlightToolOutput(output, msg.toolName, msg.args);
+            const diffHtml = msg.result?.diff ? renderDiff(msg.result.diff) : '';
+            html += `<div class="agent-tool-block ${cls}">
+              <div class="tool-header">${icon} <strong>${escHtml(msg.toolName)}</strong></div>
+              <pre class="tool-args">${escHtml(formatArgs(msg.args))}</pre>
+              ${diffHtml}
+              <div class="tool-output-wrap">
+                ${isLong ? '<button class="tool-output-toggle" onclick="this.nextElementSibling.classList.toggle(\'collapsed\');this.textContent=this.textContent===\'▼\'?\'▲\':\'▼\'">▼</button>' : ''}
+                <pre class="tool-output ${isLong ? 'collapsed' : ''}">${highlighted}</pre>
+              </div>
+            </div>`;
+          }
+          i++;
+          break;
+        }
 
         case 'tool_denied':
-          return `<div class="agent-tool-block tool-denied">${Icons.get('lock', 14)} <strong>${escHtml(msg.toolName)}</strong> — denied</div>`;
+          html += `<div class="agent-tool-block tool-denied">${Icons.get('lock', 14)} <strong>${escHtml(msg.toolName)}</strong> — denied</div>`;
+          i++;
+          break;
 
         case 'approval_request':
-          return `<div class="agent-tool-block tool-pending"><div class="tool-header">${Icons.get('shield', 14)} <strong>${escHtml(msg.toolName)}</strong> needs approval</div><pre class="tool-args">${escHtml(formatArgs(msg.args))}</pre></div>`;
+          html += `<div class="agent-tool-block tool-pending"><div class="tool-header">${Icons.get('shield', 14)} <strong>${escHtml(msg.toolName)}</strong> needs approval</div><pre class="tool-args">${escHtml(formatArgs(msg.args))}</pre></div>`;
+          i++;
+          break;
 
         case 'error':
-          return `<div class="agent-msg msg-error">${Icons.get('error', 14)} ${escHtml(msg.content)}</div>`;
+          html += `<div class="agent-msg msg-error">${Icons.get('error', 14)} ${escHtml(msg.content)}</div>`;
+          i++;
+          break;
 
-        case 'token_usage':
-          return ''; // Shown in toolbar instead
-
-        default: return '';
+        default:
+          i++;
+          break;
       }
-    }).join('');
+    }
+    return html;
   }
 
   // #6 Diff viewer
@@ -199,7 +239,7 @@ const AgentPanel = (() => {
 
     // #11 Keyboard shortcuts
     input?.addEventListener('keydown', e => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && !isRunning) { e.preventDefault(); startAgent(panelEl, opts); }
+      if (e.key === 'Enter' && !e.shiftKey && !isRunning) { e.preventDefault(); startAgent(panelEl, opts); }
       // Tab to accept slash command suggestion
       if (e.key === 'Tab' && slashMenuVisible) { e.preventDefault(); acceptSlashSuggestion(input, panelEl, opts); }
       // Arrow keys for slash menu
@@ -216,6 +256,17 @@ const AgentPanel = (() => {
     sendBtn?.addEventListener('click', () => { if (!isRunning) startAgent(panelEl, opts); });
     abortBtn?.addEventListener('click', () => abortAgent(panelEl, opts));
     retryBtn?.addEventListener('click', () => retryAgent(panelEl, opts));
+    panelEl.querySelector('#agentNewBtn')?.addEventListener('click', () => {
+      // Save current session to history before reset
+      if (messages.length > 1) {
+        const title = messages.find(m => m.type === 'message' && m.role === 'user')?.content?.slice(0, 50) || 'Session';
+        sessionHistory.unshift({ id: activeSessionId || Date.now(), title, messages: [...messages], tokenUsage: { ...tokenUsage }, ts: Date.now() });
+        if (sessionHistory.length > 30) sessionHistory.length = 30;
+        saveSessionHistory(opts);
+      }
+      reset();
+      render(panelEl, opts);
+    });
     presetSelect?.addEventListener('change', e => {
       const val = e.target.value;
       if (val.startsWith('skill:')) { selectedSkill = val.slice(6); selectedPreset = 'default'; }
@@ -223,6 +274,23 @@ const AgentPanel = (() => {
     });
     if (presetSelect) presetSelect.value = selectedSkill ? `skill:${selectedSkill}` : `preset:${selectedPreset}`;
     autoCheck?.addEventListener('change', e => { autoApprove = e.target.checked; });
+
+    // Persist model selection
+    const modelSelect = panelEl.querySelector('#agentModelSelect');
+    if (modelSelect) {
+      if (selectedModelValue) modelSelect.value = selectedModelValue;
+      modelSelect.addEventListener('change', () => { selectedModelValue = modelSelect.value; });
+    }
+
+    // Toggle collapsed tool blocks on click
+    panelEl.querySelectorAll('.agent-tool-block').forEach(el => {
+      el.addEventListener('click', e => {
+        if (e.target.closest('.tool-output-toggle')) return;
+        el.classList.toggle('collapsed');
+        const items = el.querySelector('.tool-group-items');
+        if (items) items.style.display = items.style.display === 'none' ? '' : 'none';
+      });
+    });
 
     // #5 Undo
     panelEl.querySelector('#agentUndoBtn')?.addEventListener('click', () => {
@@ -334,6 +402,7 @@ const AgentPanel = (() => {
   });
 
   function startAgent(panelEl, opts) {
+    if (isRunning) return;
     const input = panelEl.querySelector('#agentInput');
     let text = input?.value?.trim();
     if (!text) return;
@@ -352,7 +421,7 @@ const AgentPanel = (() => {
     }
 
     const modelSelect = panelEl.querySelector('#agentModelSelect');
-    const [providerId, model] = (modelSelect?.value || '').split('::');
+    const [providerId, model] = (selectedModelValue || modelSelect?.value || '').split('::');
     if (!providerId) { messages.push({ type: 'error', content: 'Select a model first.' }); render(panelEl, opts); return; }
 
     input.value = '';
@@ -370,8 +439,7 @@ const AgentPanel = (() => {
   // #8 Retry
   function retryAgent(panelEl, opts) {
     const lastError = messages.filter(m => m.type === 'error').pop();
-    const modelSelect = panelEl.querySelector('#agentModelSelect');
-    const [providerId, model] = (modelSelect?.value || '').split('::');
+    const [providerId, model] = (selectedModelValue || '').split('::');
     if (!providerId) return;
 
     isRunning = true;
@@ -387,6 +455,12 @@ const AgentPanel = (() => {
   function fetchSSE(url, body, panelEl, opts) {
     fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       .then(response => {
+        if (!response.ok) {
+          return response.json().then(err => {
+            messages.push({ type: 'error', content: err.error || `HTTP ${response.status}` });
+            isRunning = false; render(panelEl, opts);
+          });
+        }
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
@@ -413,6 +487,8 @@ const AgentPanel = (() => {
     switch (evt.type) {
       case 'session_start': activeSessionId = evt.sessionId; break;
       case 'message': case 'tool_start': case 'tool_result': case 'tool_denied': case 'error':
+        // Skip user messages from server — already added locally before fetchSSE
+        if (evt.type === 'message' && evt.role === 'user') break;
         clearStreamBuffer(panelEl);
         messages.push(evt);
         if (evt.type === 'error') { UI.toast(evt.content, 'error'); UI.playSound('error'); }
@@ -521,23 +597,26 @@ const AgentPanel = (() => {
 
   // #2 Persistence
   function saveHistory(opts) {
-    if (!currentCard || !opts.projectPath) return;
+    if (!opts.projectPath || messages.length < 2) return;
+    const cardId = currentCard?.id || activeSessionId || ('agent_' + Date.now().toString(36));
     fetch('/api/agent/history/save', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ projectPath: opts.projectPath, cardId: currentCard.id, messages, tokenUsage })
+      body: JSON.stringify({ projectPath: opts.projectPath, cardId, messages, tokenUsage })
     });
   }
 
-  async function loadHistory(opts) {
-    if (!currentCard || !opts.projectPath) return;
+  async function loadHistory(opts, cardId) {
+    const id = cardId || currentCard?.id;
+    if (!id || !opts.projectPath) return;
     try {
       const resp = await fetch('/api/agent/history/load', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectPath: opts.projectPath, cardId: currentCard.id })
+        body: JSON.stringify({ projectPath: opts.projectPath, cardId: id })
       });
       const data = await resp.json();
       if (data.messages && data.messages.length > 0) {
-        // Restore display messages from history
-        messages = data.messages.filter(m => m.type); // Only display events
+        messages = data.messages.filter(m => m.type);
         if (data.tokenUsage) tokenUsage = data.tokenUsage;
+        const panelEl = document.getElementById('agentPanelContent');
+        if (panelEl) render(panelEl, opts);
       }
     } catch {}
   }
@@ -639,6 +718,76 @@ const AgentPanel = (() => {
       app.stats.runsPerDay[today] = (app.stats.runsPerDay[today] || 0) + 1;
       localStorage.setItem('flowboard-ai-app', JSON.stringify(app));
     } catch {}
+  }
+
+  // Session history persistence
+  function saveSessionHistory(opts) {
+    if (!opts?.projectPath) return;
+    try {
+      fetch('/api/agent/sessions/save', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectPath: opts.projectPath, sessions: sessionHistory })
+      });
+    } catch {}
+  }
+
+  async function loadSessionHistory(opts) {
+    if (!opts?.projectPath) return;
+    try {
+      const resp = await fetch('/api/agent/sessions/load', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectPath: opts.projectPath })
+      });
+      const data = await resp.json();
+      if (data.sessions) sessionHistory = data.sessions;
+    } catch {}
+  }
+
+  function showSessionHistory(panelEl, opts) {
+    let menu = panelEl.querySelector('.session-history-menu');
+    if (menu) { menu.remove(); return; }
+    menu = document.createElement('div');
+    menu.className = 'session-history-menu';
+    if (sessionHistory.length === 0) {
+      menu.innerHTML = '<div class="session-empty">No saved sessions</div>';
+    } else {
+      // Search box
+      menu.innerHTML = `<input type="text" class="session-search" placeholder="Search sessions..." id="sessionSearchInput">
+        <div class="session-list" id="sessionList">${renderSessionList(sessionHistory)}</div>`;
+    }
+    panelEl.querySelector('.agent-header').appendChild(menu);
+
+    // Search filter
+    menu.querySelector('#sessionSearchInput')?.addEventListener('input', e => {
+      const q = e.target.value.toLowerCase();
+      const filtered = sessionHistory.filter(s => s.title.toLowerCase().includes(q));
+      menu.querySelector('#sessionList').innerHTML = renderSessionList(filtered);
+      bindSessionClicks(menu, panelEl, opts);
+    });
+    bindSessionClicks(menu, panelEl, opts);
+  }
+
+  function renderSessionList(sessions) {
+    return sessions.map(s => `
+      <div class="session-item" data-session-id="${s.id}">
+        <div class="session-item-title">${escHtml(s.title)}</div>
+        <div class="session-item-meta">${new Date(s.ts).toLocaleDateString()} — ${s.messages.length} msgs</div>
+      </div>
+    `).join('');
+  }
+
+  function bindSessionClicks(menu, panelEl, opts) {
+    menu.querySelectorAll('.session-item').forEach(el => {
+      el.addEventListener('click', () => {
+        const id = el.dataset.sessionId;
+        const session = sessionHistory.find(s => String(s.id) === id);
+        if (session) {
+          messages = [...session.messages];
+          tokenUsage = session.tokenUsage || { input: 0, output: 0, total: 0 };
+          activeSessionId = null;
+          menu.remove();
+          render(panelEl, opts);
+        }
+      });
+    });
   }
 
   function scrollBottom(panelEl) {

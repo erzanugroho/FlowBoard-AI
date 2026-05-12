@@ -120,9 +120,11 @@
             <div class="right-panel-tabs">
               <div class="right-panel-tab active" data-panel-tab="chat"><i data-lucide="message-square" style="width:14px;height:14px"></i> Chat</div>
               <div class="right-panel-tab" data-panel-tab="agent"><i data-lucide="zap" style="width:14px;height:14px"></i> Agent</div>
+              <div class="right-panel-tab" data-panel-tab="history"><i data-lucide="clock" style="width:14px;height:14px"></i> History</div>
             </div>
             <div class="right-panel-content" id="chatPanelContent"></div>
             <div class="right-panel-content" id="agentPanelContent" style="display:none"></div>
+            <div class="right-panel-content" id="historyPanelContent" style="display:none"></div>
           </div>
         </div>
       </div>
@@ -373,6 +375,7 @@
   <script src="js/modules/providers.js"></script>
   <script src="js/modules/ui-utils.js"></script>
   <script src="js/modules/agent-panel.js"></script>
+  <script src="js/modules/history-panel.js"></script>
   <script src="js/app.js"></script>
   <script>document.addEventListener('DOMContentLoaded', () => { if(window.lucide) lucide.createIcons(); });</script>
 </body>

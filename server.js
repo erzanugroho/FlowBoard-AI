@@ -258,6 +258,7 @@ app.get('/api/agent/file-changes', (req, res) => res.json(getFileChanges()));
 // Main agent run endpoint (supports #1 auto-approve, #3 context, #5 multi-turn, #14 presets)
 app.post('/api/agent/run', (req, res) => {
   const { providerId, model, projectPath, prompt, sessionId, autoApprove, preset, skill, existingMessages, briefing, tokenBudget } = req.body;
+  console.log('[Agent] Run request:', { providerId, model, projectPath: projectPath?.slice(-30), prompt: prompt?.slice(0, 50) });
   const providers = loadProviders();
   const provider = providers.find(p => p.id === providerId);
   if (!provider) return res.status(400).json({ error: 'Provider not configured' });
@@ -271,7 +272,10 @@ app.post('/api/agent/run', (req, res) => {
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
 
-  const send = (data) => { if (!res.writableEnded) res.write(`data: ${JSON.stringify(data)}\n\n`); };
+  const send = (data) => {
+    if (data.type === 'error' || data.type === 'aborted') console.log('[Agent]', data.type, data.content || '');
+    if (!res.writableEnded) res.write(`data: ${JSON.stringify(data)}\n\n`);
+  };
 
   // #5 Reuse existing session for multi-turn
   let session = activeSessions.get(sid);
@@ -313,14 +317,17 @@ app.post('/api/agent/run', (req, res) => {
 
   send({ type: 'session_start', sessionId: sid });
 
+  let isAgentRunning = true;
   session.run(prompt).catch(err => {
+    console.error('[Agent Error]', err.message, err.stack?.split('\n')[1]);
     send({ type: 'error', content: err.message });
   }).finally(() => {
+    isAgentRunning = false;
     send({ type: 'stream_end', messages: session.getMessages(), tokenUsage: session.getTokenUsage() });
     if (!res.writableEnded) res.end();
   });
 
-  req.on('close', () => { session.abort(); });
+  req.on('close', () => { isAgentRunning = false; });
 });
 
 // #8 Retry with error context
@@ -477,6 +484,93 @@ app.post('/api/agent/history/load', (req, res) => {
   if (!fs.existsSync(filePath)) return res.json({ messages: [], tokenUsage: null });
   try { res.json(JSON.parse(fs.readFileSync(filePath, 'utf-8'))); }
   catch { res.json({ messages: [], tokenUsage: null }); }
+});
+
+// ─── History List & Search ───────────────────────────────
+app.post('/api/history/list', (req, res) => {
+  const { projectPath } = req.body;
+  if (!projectPath || !validateProjectPath(projectPath)) return res.status(400).json({ error: 'Invalid projectPath' });
+  const results = [];
+
+  // Agent history files
+  const agentDir = path.join(projectPath, FLOWBOARD_DIR, 'agent-history');
+  if (fs.existsSync(agentDir)) {
+    for (const file of fs.readdirSync(agentDir)) {
+      if (!file.endsWith('.json')) continue;
+      try {
+        const data = JSON.parse(fs.readFileSync(path.join(agentDir, file), 'utf-8'));
+        const msgs = data.messages || [];
+        const firstUser = msgs.find(m => m.role === 'user');
+        results.push({
+          id: file.replace('.json', ''),
+          type: 'agent',
+          title: (firstUser?.content || '').slice(0, 80) || file.replace('.json', ''),
+          messageCount: msgs.length,
+          updatedAt: data.updatedAt || 0
+        });
+      } catch {}
+    }
+  }
+
+  // Chat threads from project state
+  const state = readProjectState(projectPath);
+  if (state && state.chatThreads) {
+    for (const thread of state.chatThreads) {
+      if (!thread.messages || !thread.messages.length) continue;
+      results.push({
+        id: thread.id,
+        type: 'chat',
+        title: thread.title || 'Chat',
+        messageCount: thread.messages.length,
+        updatedAt: thread.messages[thread.messages.length - 1]?.ts || 0
+      });
+    }
+  }
+
+  results.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  res.json({ results });
+});
+
+app.post('/api/history/search', (req, res) => {
+  const { projectPath, query } = req.body;
+  if (!projectPath || !validateProjectPath(projectPath) || !query) return res.status(400).json({ error: 'projectPath and query required' });
+  const results = [];
+  const q = query.toLowerCase();
+
+  // Search agent history
+  const agentDir = path.join(projectPath, FLOWBOARD_DIR, 'agent-history');
+  if (fs.existsSync(agentDir)) {
+    for (const file of fs.readdirSync(agentDir)) {
+      if (!file.endsWith('.json')) continue;
+      try {
+        const data = JSON.parse(fs.readFileSync(path.join(agentDir, file), 'utf-8'));
+        if (!data.messages) continue;
+        for (const msg of data.messages) {
+          if ((msg.content || '').toLowerCase().includes(q)) {
+            results.push({ id: file.replace('.json', ''), type: 'agent', role: msg.role, snippet: (msg.content || '').slice(0, 150), updatedAt: data.updatedAt });
+            break;
+          }
+        }
+      } catch {}
+    }
+  }
+
+  // Search chat threads
+  const state = readProjectState(projectPath);
+  if (state && state.chatThreads) {
+    for (const thread of state.chatThreads) {
+      if (!thread.messages) continue;
+      for (const msg of thread.messages) {
+        if ((msg.content || '').toLowerCase().includes(q)) {
+          results.push({ id: thread.id, type: 'chat', role: msg.role, snippet: (msg.content || '').slice(0, 150), updatedAt: msg.ts, title: thread.title });
+          break;
+        }
+      }
+    }
+  }
+
+  results.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  res.json({ results: results.slice(0, 30) });
 });
 
 // ─── Undo, Export, Watcher, Fork ─────────────────────────

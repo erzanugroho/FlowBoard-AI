@@ -90,7 +90,6 @@ const Providers = (() => {
           <div class="preset-grid">
             ${PRESETS.map(pr => `
               <button class="preset-card" data-preset="${pr.id}" title="${esc(pr.desc)}">
-                <div class="preset-card-icon" style="background:${pr.color}20;color:${pr.color}">${pr.icon}</div>
                 <div class="preset-card-info">
                   <div class="preset-card-name">${esc(pr.name)}</div>
                   <div class="preset-card-desc">${esc(pr.desc)}</div>

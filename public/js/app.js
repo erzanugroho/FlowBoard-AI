@@ -101,6 +101,7 @@
       document.getElementById('board-project-desc').textContent = currentProjectPath;
       showScreen('board');
       renderBoard();
+      AgentPanel.reset();
       renderAIPanel();
       renderMCInline();
     } catch (err) {
@@ -375,6 +376,8 @@
         const target = tab.dataset.panelTab;
         document.getElementById('chatPanelContent').style.display = target === 'chat' ? '' : 'none';
         document.getElementById('agentPanelContent').style.display = target === 'agent' ? '' : 'none';
+        document.getElementById('historyPanelContent').style.display = target === 'history' ? '' : 'none';
+        if (target === 'history') renderHistoryPanel();
       });
     });
 
@@ -404,6 +407,41 @@
       projectPath: currentProjectPath,
       card: null,
       onSave: () => saveCurrentProject()
+    });
+  }
+
+  // === HISTORY PANEL ===
+  function renderHistoryPanel() {
+    HistoryPanel.render(document.getElementById('historyPanelContent'), {
+      projectPath: currentProjectPath,
+      onOpenChat: (threadId) => {
+        Chat.setThread(threadId);
+        const panel = document.getElementById('aiPanel');
+        panel.querySelectorAll('.right-panel-tab').forEach(t => t.classList.remove('active'));
+        panel.querySelector('[data-panel-tab="chat"]')?.classList.add('active');
+        document.getElementById('chatPanelContent').style.display = '';
+        document.getElementById('agentPanelContent').style.display = 'none';
+        document.getElementById('historyPanelContent').style.display = 'none';
+        Chat.render(currentProject, document.getElementById('chatPanelContent'), providers, { onSave: () => saveCurrentProject() });
+      },
+      onOpenAgent: (cardId) => {
+        const panel = document.getElementById('aiPanel');
+        panel.querySelectorAll('.right-panel-tab').forEach(t => t.classList.remove('active'));
+        panel.querySelector('[data-panel-tab="agent"]')?.classList.add('active');
+        document.getElementById('chatPanelContent').style.display = 'none';
+        document.getElementById('agentPanelContent').style.display = '';
+        document.getElementById('historyPanelContent').style.display = 'none';
+        // Set a virtual card so loadHistory can use it
+        AgentPanel.reset();
+        AgentPanel.setCard({ id: cardId, title: cardId });
+        AgentPanel.render(document.getElementById('agentPanelContent'), {
+          providers,
+          projectPath: currentProjectPath,
+          card: { id: cardId, title: cardId },
+          onSave: () => saveCurrentProject()
+        });
+        AgentPanel.loadHistory({ projectPath: currentProjectPath }, cardId);
+      }
     });
   }
 

@@ -267,6 +267,7 @@ class AgentSession {
   }
 
   async run(userMessage) {
+    this.aborted = false;
     this.messages.push({ role: 'user', content: userMessage });
     this.onEvent({ type: 'message', role: 'user', content: userMessage });
     await runHook(this.hooks, 'beforeRun', { message: userMessage, projectRoot: this.projectRoot });

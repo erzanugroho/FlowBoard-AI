@@ -6,16 +6,17 @@ const Chat = (() => {
   let currentThreadId = null;
   let isStreaming = false;
   let activeTab = 'answer';
+  let selectedModelValue = ''; // persist model selection across re-renders
 
   function render(project, panelEl, providers, callbacks) {
     if (!project) return;
-    const thread = currentThreadId ? project.chatThreads.find(t => t.id === currentThreadId) : project.chatThreads[0];
-    if (!thread && project.chatThreads.length === 0) {
-      const t = createChatThread('General');
-      project.chatThreads.push(t);
-      currentThreadId = t.id;
-    } else if (thread) {
-      currentThreadId = thread.id;
+    const thread = currentThreadId ? project.chatThreads.find(t => t.id === currentThreadId) : null;
+    if (!thread) {
+      if (project.chatThreads.length === 0) {
+        const t = createChatThread('General');
+        project.chatThreads.push(t);
+      }
+      currentThreadId = project.chatThreads[0].id;
     }
 
     const ct = project.chatThreads.find(t => t.id === currentThreadId);
@@ -35,7 +36,7 @@ const Chat = (() => {
             <option value="">Select model...</option>
             ${provList.filter(p => p.enabled !== false).map(p => {
               const models = (p.models && p.models.length) ? p.models : [p.defaultModel || 'default'];
-              return models.map(m => `<option value="${p.id}::${m}">${esc(p.name)} / ${esc(m)}</option>`).join('');
+              return models.map(m => `<option value="${p.id}::${m}" ${selectedModelValue === p.id+'::'+m ? 'selected' : ''}>${esc(p.name)} / ${esc(m)}</option>`).join('');
             }).join('')}
           </select>
         </div>
@@ -48,6 +49,7 @@ const Chat = (() => {
       </div>
       <div class="chat-messages" id="chatMessages">
         ${renderMessages(ct)}
+        ${isStreaming ? '<div class="chat-msg msg-ai"><div class="msg-avatar"><i data-lucide="bot" style="width:14px;height:14px"></i></div><div class="msg-content"><div class="msg-text chat-loading"><span class="dot-pulse"></span> Thinking...</div></div></div>' : ''}
       </div>
       <div class="chat-input-area">
         <div class="chat-suggestions" id="chatSuggestions">
@@ -56,12 +58,17 @@ const Chat = (() => {
           <button class="suggestion-btn" data-action="summarize">Summarize project</button>
         </div>
         <div class="chat-input-row">
-          <textarea class="chat-input" id="chatInput" placeholder="Ask AI anything..." rows="1"></textarea>
-          <button class="chat-send-btn" id="chatSendBtn" title="Send">
-            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
+          <textarea class="chat-input" id="chatInput" placeholder="Ask AI anything..." rows="1" ${isStreaming ? 'disabled' : ''}></textarea>
+          <button class="chat-send-btn" id="chatSendBtn" title="Send" ${isStreaming ? 'disabled' : ''}>
+            ${isStreaming ? '<span class="dot-pulse"></span>' : '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>'}
           </button>
         </div>
       </div>`;
+
+    // Persist model selection on change
+    panelEl.querySelector('#chatModelSelect')?.addEventListener('change', e => {
+      selectedModelValue = e.target.value;
+    });
 
     // Events
     panelEl.querySelector('#chatThreadSelect')?.addEventListener('change', e => {
@@ -151,19 +158,18 @@ const Chat = (() => {
     input.value = '';
     input.style.height = 'auto';
 
-    // Get selected model
-    const modelSelect = panelEl.querySelector('#chatModelSelect');
-    const modelVal = modelSelect?.value || '';
-    const [providerId, model] = modelVal.split('::');
+    // Get selected model (use persisted value)
+    const providerId = selectedModelValue.split('::')[0];
+    const model = selectedModelValue.split('::')[1];
 
     if (!providerId) {
-      thread.messages.push({ role: 'assistant', content: 'No AI provider selected. Please configure a provider in Settings and select a model above.', ts: Date.now() });
+      thread.messages.push({ role: 'assistant', content: 'No AI provider selected. Please select a model above.', ts: Date.now() });
       render(project, panelEl, providers, callbacks);
       callbacks.onSave?.();
       return;
     }
 
-    // Show streaming state
+    // Show loading state
     isStreaming = true;
     render(project, panelEl, providers, callbacks);
 
